@@ -1,0 +1,40 @@
+@if (transactions.length) {
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Amount (RM)</th>
+        <th>Actions</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (t of transactions; track t.id) {
+        <tr>
+          <td>{{ t.date | date: dateFormat }}</td>
+          <td
+            [class.income]="t.type === 'income'"
+            [class.expense]="t.type === 'expense'">
+            {{ t.type | titlecase }}
+          </td>
+          <td>{{ t.category }}</td>
+          <td>{{ t.description || '-' }}</td>
+          <td
+            [class.income]="t.type === 'income'"
+            [class.expense]="t.type === 'expense'">
+            {{ t.amount | number: '1.2-2' }}
+          </td>
+          <td class="actions-cell">
+            <button class="edit-btn" (click)="onEditAmount(t)">Edit</button>
+            <button class="delete-btn" (click)="onDelete(t.id)">Delete</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+} @else {
+  <p>No transactions yet. Add one above 👆</p>
+}

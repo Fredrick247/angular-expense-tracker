@@ -1,0 +1,21 @@
+form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem 1.5rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-row label {
+  font-size: .9rem;
+  margin-bottom: .25rem;
+}
+
+button {
+  grid-column: 1 / -1;
+  padding: .5rem 1rem;
+  cursor: pointer;
+}

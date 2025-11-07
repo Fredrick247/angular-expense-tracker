@@ -1,0 +1,33 @@
+<h2>Add Transaction</h2>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="form-row">
+    <label>Type</label>
+    <select formControlName="type">
+      <option value="income">Income</option>
+      <option value="expense">Expense</option>
+    </select>
+  </div>
+
+  <div class="form-row">
+    <label>Category</label>
+    <input formControlName="category" placeholder="e.g. Salary, Food, Bills" />
+  </div>
+
+  <div class="form-row">
+    <label>Description</label>
+    <input formControlName="description" placeholder="Optional" />
+  </div>
+
+  <div class="form-row">
+    <label>Amount (RM)</label>
+    <input type="number" formControlName="amount" step="0.01" />
+  </div>
+
+  <div class="form-row">
+    <label>Date</label>
+    <input type="date" formControlName="date" />
+  </div>
+
+  <button type="submit" [disabled]="form.invalid">Add</button>
+</form>

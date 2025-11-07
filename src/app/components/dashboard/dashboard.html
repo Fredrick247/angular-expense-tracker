@@ -1,0 +1,40 @@
+<div class="summary-cards">
+  <div class="card income">
+    <h3>Total Income</h3>
+    <p>RM {{ totalIncome | number: '1.2-2' }}</p>
+  </div>
+  <div class="card expense">
+    <h3>Total Expense</h3>
+    <p>RM {{ totalExpense | number: '1.2-2' }}</p>
+  </div>
+  <div class="card balance" [class.negative]="balance < 0">
+    <h3>Balance</h3>
+    <p>RM {{ balance | number: '1.2-2' }}</p>
+  </div>
+</div>
+<div class="date-format-toggle">
+  <label>Date Format:</label>
+  <button (click)="toggleDateFormat()">
+    {{ dateFormat === 'yyyy-MM-dd' ? 'YYYY-MM-DD' : 'DD/MM/YYYY' }}
+  </button>
+</div>
+<hr>
+
+<app-transaction-form></app-transaction-form>
+
+<hr>
+
+<div class="list-header">
+  <h2>Transactions</h2>
+  <div class="list-actions">
+    <button type="button" class="sort-btn"(click)="toggleSortDirection()">
+      Sort: {{ sortDirection === 'desc' ? 'Newest ↓' : 'Oldest ↑' }}
+    </button>
+  </div>
+  <button (click)="onClearAll()">Clear All</button>
+</div>
+
+<app-transaction-list
+ [transactions]="transactions"
+ [dateFormat]="dateFormat">
+</app-transaction-list>
