@@ -55,3 +55,17 @@ button {
 .delete-btn {
   margin-left: 0.4rem;
 }
+
+.sortable-date{
+  cursor:default;
+}
+
+.sort-icon-btn{
+  margin-left: 0.25rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor:pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+}

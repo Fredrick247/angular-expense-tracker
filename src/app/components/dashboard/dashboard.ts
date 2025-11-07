@@ -24,8 +24,8 @@ export class DashboardComponent {
   constructor(private transactionService: TransactionService) {}
 
   ngOnInit() {
-    this.transactionService.transactions$.subscribe(transactions => {
-      this.transactions = [...transactions].sort((a,b) => b.date.localeCompare(a.date));
+      this.transactionService.transactions$.subscribe(transactions => {
+      this.transactions = this.sortTransactions(transactions);
       this.calculateSummary();
     });
   }

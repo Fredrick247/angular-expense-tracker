@@ -26,15 +26,12 @@
 
 <div class="list-header">
   <h2>Transactions</h2>
-  <div class="list-actions">
-    <button type="button" class="sort-btn"(click)="toggleSortDirection()">
-      Sort: {{ sortDirection === 'desc' ? 'Newest ↓' : 'Oldest ↑' }}
-    </button>
-  </div>
-  <button (click)="onClearAll()">Clear All</button>
+  <button type="button" (click)="onClearAll()">Clear All</button>
 </div>
 
 <app-transaction-list
  [transactions]="transactions"
- [dateFormat]="dateFormat">
+  [dateFormat]="dateFormat"
+  [sortDirection]="sortDirection"
+  (sortToggle)="toggleSortDirection()">
 </app-transaction-list>

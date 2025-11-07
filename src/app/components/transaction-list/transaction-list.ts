@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output,EventEmitter } from '@angular/core';
 import { TitleCasePipe,DecimalPipe, DatePipe } from '@angular/common'; // ✅ add this
 import{Transaction} from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction';
@@ -13,8 +13,15 @@ import { TransactionService } from '../../services/transaction';
 })
 export class TransactionList {
 @Input()transactions : Transaction[] = [];
-  @Input() dateFormat: 'yyyy-MM-dd' | 'dd/MM/yyyy' = 'yyyy-MM-dd';
+@Input() dateFormat: 'yyyy-MM-dd' | 'dd/MM/yyyy' = 'yyyy-MM-dd';
+@Input() sortDirection: 'asc' | 'desc' = 'desc';
+@Output() sortToggle = new EventEmitter<void>();
+
 constructor(private transactionService: TransactionService){}
+
+public onSortToggle(): void{
+  this.sortToggle.emit();
+}
 
 public onEditAmount(t: Transaction): void{
   const input = prompt('Enter new amount (RM)', t.amount.toString());
