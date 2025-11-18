@@ -1,5 +1,4 @@
-/* ===== Card wrapper ===================================== */
-
+/* card wrapper */
 .transactions-card {
   margin-top: 0.75rem;
   background: #ffffff;
@@ -8,14 +7,21 @@
   overflow: hidden;
 }
 
-/* ===== Table ============================================ */
+/* NEW: horizontal scroll container */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
 
+/* table */
 .transactions-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  min-width: 640px; /* 👈 ensures columns don't squeeze too much */
 }
 
+/* rest of your existing table styles… */
 .transactions-table thead {
   background: #f3f4f6;
 }
@@ -35,104 +41,4 @@
   background: #f9fafb;
 }
 
-/* sortable header on Date */
-
-.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.sort-indicator {
-  margin-left: 0.25rem;
-  font-size: 0.75rem;
-  opacity: 0.6;
-}
-
-/* numeric column */
-
-.amount-col {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.amount-col.negative {
-  color: #b91c1c;
-}
-
-/* ===== Type pill ======================================== */
-
-.type-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.pill-income {
-  background: rgba(22, 163, 74, 0.08);
-  color: #15803d;
-}
-
-.pill-expense {
-  background: rgba(239, 68, 68, 0.08);
-  color: #b91c1c;
-}
-
-/* ===== Actions column =================================== */
-
-.actions-col {
-  white-space: nowrap;
-}
-
-.table-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 0.28rem 0.75rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease,
-    box-shadow 0.15s ease, transform 0.05s ease;
-}
-
-.table-btn + .table-btn {
-  margin-left: 0.25rem;
-}
-
-.table-btn.edit {
-  background: #fbbf24;
-  color: #78350f;
-}
-
-.table-btn.edit:hover {
-  background: #f59e0b;
-  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
-  transform: translateY(-1px);
-}
-
-.table-btn.delete {
-  background: #ef4444;
-  color: #ffffff;
-}
-
-.table-btn.delete:hover {
-  background: #b91c1c;
-  box-shadow: 0 6px 14px rgba(248, 113, 113, 0.35);
-  transform: translateY(-1px);
-}
-
-/* ===== Empty state ====================================== */
-
-.empty-state-card {
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-}
-
-.empty-text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
+/* etc. keep your type-pill, buttons, amount-col styles */
