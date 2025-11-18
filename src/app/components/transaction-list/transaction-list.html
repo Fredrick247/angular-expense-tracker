@@ -1,54 +1,49 @@
 <div class="transactions-card" *ngIf="transactions?.length; else emptyState">
-  <table class="transactions-table">
-    <thead>
-      <tr>
-        <th (click)="onSortToggle()" class="sortable">
-          Date
-          <span class="sort-indicator">
-            {{ sortDirection === 'asc' ? '↑' : '↓' }}
-          </span>
-        </th>
-        <th>Type</th>
-        <th>Category</th>
-        <th>Description</th>
-        <th class="amount-col">Amount (RM)</th>
-        <th class="actions-col">Actions</th>
-      </tr>
-    </thead>
+  <div class="table-scroll">
+    <table class="transactions-table">
+      <thead>
+        <tr>
+          <th (click)="onSortToggle()" class="sortable">
+            Date
+            <span class="sort-indicator">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
+          <th>Type</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th class="amount-col">Amount (RM)</th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
 
-    <tbody>
-      <tr *ngFor="let t of transactions">
-        <td>{{ t.date | date: dateFormat }}</td>
+      <tbody>
+        <tr *ngFor="let t of transactions">
+          <td>{{ t.date | date: dateFormat }}</td>
 
-        <td>
-          <span
-            class="type-pill"
-            [ngClass]="t.type === 'income' ? 'pill-income' : 'pill-expense'">
-            {{ t.type | titlecase }}
-          </span>
-        </td>
+          <td>
+            <span
+              class="type-pill"
+              [ngClass]="t.type === 'income' ? 'pill-income' : 'pill-expense'">
+              {{ t.type | titlecase }}
+            </span>
+          </td>
 
-        <td>{{ t.category }}</td>
-        <td>{{ t.description || '-' }}</td>
+          <td>{{ t.category }}</td>
+          <td>{{ t.description || '-' }}</td>
 
-        <td class="amount-col" [class.negative]="t.type === 'expense'">
-          {{ t.amount | number: '1.2-2' }}
-        </td>
+          <td class="amount-col" [class.negative]="t.type === 'expense'">
+            {{ t.amount | number: '1.2-2' }}
+          </td>
 
-        <td class="actions-col">
-          <!-- matches onEditAmount(t: Transaction) -->
-          <button class="table-btn edit" (click)="onEditAmount(t)">
-            Edit
-          </button>
-
-          <!-- matches onDelete(id: number) -->
-          <button class="table-btn delete" (click)="onDelete(t.id)">
-            Delete
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+          <td class="actions-col">
+            <button class="table-btn edit" (click)="onEditAmount(t)">Edit</button>
+            <button class="table-btn delete" (click)="onDelete(t.id)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <ng-template #emptyState>
