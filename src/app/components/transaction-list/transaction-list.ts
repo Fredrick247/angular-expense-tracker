@@ -2,12 +2,13 @@ import { Component, Input, Output,EventEmitter } from '@angular/core';
 import { TitleCasePipe,DecimalPipe, DatePipe } from '@angular/common'; // ✅ add this
 import{Transaction} from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction';
+import { CommonModule } from '@angular/common';   // <-- ADD THIS
 
 
 @Component({
   selector: 'app-transaction-list',
   standalone : true,
-  imports: [TitleCasePipe,DecimalPipe,DatePipe],
+  imports: [TitleCasePipe,DecimalPipe,DatePipe,CommonModule],
   templateUrl: './transaction-list.html',
   styleUrl: './transaction-list.css',
 })

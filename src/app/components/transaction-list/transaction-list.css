@@ -1,71 +1,138 @@
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: .5rem;
+/* ===== Card wrapper ===================================== */
+
+.transactions-card {
+  margin-top: 0.75rem;
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
 }
 
-th, td {
-  padding: .5rem;
-  border-bottom: 1px solid #ddd;
+/* ===== Table ============================================ */
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.transactions-table thead {
+  background: #f3f4f6;
+}
+
+.transactions-table th,
+.transactions-table td {
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
 
-td.income {
-  color: #28a745;
+.transactions-table tr:last-child td {
+  border-bottom: none;
 }
 
-td.expense {
-  color: #dc3545;
+.transactions-table tbody tr:hover {
+  background: #f9fafb;
 }
 
-.actions-cell {
+/* sortable header on Date */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sort-indicator {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+/* numeric column */
+
+.amount-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.amount-col.negative {
+  color: #b91c1c;
+}
+
+/* ===== Type pill ======================================== */
+
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.pill-income {
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
+}
+
+.pill-expense {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+
+/* ===== Actions column =================================== */
+
+.actions-col {
   white-space: nowrap;
 }
 
-button {
-  padding: 0.25rem 0.6rem;
+.table-btn {
   border: none;
-  border-radius: 4px;
+  border-radius: 999px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s ease-in-out;
+  transition: background 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.05s ease;
 }
 
-.edit-btn {
-  background-color: #ff9800;
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: #e68900;
-}
-
-/* Delete = red */
-.delete-btn {
-  background-color: #f44336;
-  color: white;
-}
-
-.delete-btn:hover {
-  background-color: #d32f2f;
-}
-
-/* Optional spacing between buttons */
-.edit-btn,
-.delete-btn {
-  margin-left: 0.4rem;
-}
-
-.sortable-date{
-  cursor:default;
-}
-
-.sort-icon-btn{
+.table-btn + .table-btn {
   margin-left: 0.25rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  cursor:pointer;
-  font-size: 0.8rem;
-  line-height: 1;
+}
+
+.table-btn.edit {
+  background: #fbbf24;
+  color: #78350f;
+}
+
+.table-btn.edit:hover {
+  background: #f59e0b;
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.table-btn.delete {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.table-btn.delete:hover {
+  background: #b91c1c;
+  box-shadow: 0 6px 14px rgba(248, 113, 113, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ===== Empty state ====================================== */
+
+.empty-state-card {
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+}
+
+.empty-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
 }
