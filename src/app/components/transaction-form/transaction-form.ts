@@ -26,7 +26,14 @@ export class TransactionForm {
       type: ['expense' as TransactionType, Validators.required],
       category : ['', Validators.required],
       description: [''],
-      amount:[null,[Validators.required, Validators.min(0.01)]],
+
+      //New ingredients for amount
+      baseAmount : [null,[Validators.required, Validators.min(0.01)]],
+      taxPercent: [0],
+      otherCharges: [0],
+      discountPercent: [0],
+
+      amount:[null,[Validators.required]],
       date : [this.todayString(),Validators.required]
     });
 
@@ -39,6 +46,9 @@ export class TransactionForm {
       this.form.patchValue({category: ''})
     }
   });
+
+  // New calc amount whenever the pieces change
+  this.setupAmountCalculation();
   }
   
 
@@ -71,23 +81,52 @@ export class TransactionForm {
     this.form.patchValue({ category: name });
   }
 
+  private setupAmountCalculation(): void{
+    this.form.valueChanges.subscribe(val =>{
+      const base = +val.baseAmount || 0;
+      const taxPerc = +val.taxPercent || 0;
+      const others = +val.otherCharges || 0;
+      const discPerc = +val.discountPercent || 0;
+
+      const tax = base * taxPerc /100;
+      const discount = base * discPerc / 100;
+      const total = base + tax + others - discount;
+
+      //avoid infinite loop
+      this.form.get('amount')?.setValue(total,{emitEvent:false});
+    });
+  }
+
   onSubmit(){
     if(this.form.invalid)return;
 
-    this.transactionService.addTransaction(this.form.value);
-    this.form.patchValue({
-      description:'',
-      amount: null
-    })
+    const raw = this.form.value;
+
+    this.transactionService.addTransaction({
+      type : raw.type,
+      category : raw.category,
+      description : raw.description,
+      amount : raw.amount,
+      date: raw.date
+    });
+
+
+    // this.transactionService.addTransaction(this.form.value);
+    // this.form.patchValue({
+    //   description:'',
+    //   amount: null
+    // })
 
     // reset only the fields that normally change
     this.form.patchValue({
     description : '',
-    amount : null
+    baseAmount : null,
+    taxPercent : 0,
+    otherCharges: 0,
+    discountPercent: 0,
+    amount : null,
+    date: this.todayString()
   });
-
   }
-
- 
-
+  
 }

@@ -57,3 +57,28 @@
   background-color: #f5f5f5;
   cursor: pointer;
 }
+
+.date-format-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.toggle-pill {
+  user-select: none;
+  cursor: pointer;
+  background: linear-gradient(145deg, #f0f0f0, #dcdcdc);
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 0.3rem 0.8rem;
+  font-weight: 600;
+  color: #333;
+  transition: all 0.2s ease-in-out;
+}
+
+.toggle-pill:hover {
+  background: #0078d7;
+  color: white;
+  border-color: #0078d7;
+}
