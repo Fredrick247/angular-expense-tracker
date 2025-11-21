@@ -29,9 +29,9 @@ export class TransactionForm {
 
       //New ingredients for amount
       baseAmount : [null,[Validators.required, Validators.min(0.01)]],
-      taxPercent: [0],
-      otherCharges: [0],
-      discountPercent: [0],
+      taxPercent: [null],
+      otherCharges: [null],
+      discountPercent: [null],
 
       amount:[null,[Validators.required]],
       date : [this.todayString(),Validators.required]
@@ -87,10 +87,17 @@ export class TransactionForm {
       const taxPerc = +val.taxPercent || 0;
       const others = +val.otherCharges || 0;
       const discPerc = +val.discountPercent || 0;
+      const type = val.type as TransactionType;
 
-      const tax = base * taxPerc /100;
-      const discount = base * discPerc / 100;
-      const total = base + tax + others - discount;
+      const taxAmount = base * (taxPerc / 100);
+      const discountAmount = base * (discPerc / 100);
+      let total : number;
+
+      if(type === 'income'){
+        total = base - others - taxAmount - discountAmount;
+      }else{
+        total = base + others + taxAmount - discountAmount;
+      }
 
       //avoid infinite loop
       this.form.get('amount')?.setValue(total,{emitEvent:false});
@@ -118,14 +125,14 @@ export class TransactionForm {
     // })
 
     // reset only the fields that normally change
-    this.form.patchValue({
-    description : '',
-    baseAmount : null,
-    taxPercent : 0,
-    otherCharges: 0,
-    discountPercent: 0,
-    amount : null,
-    date: this.todayString()
+   this.form.patchValue({
+  description: '',
+  baseAmount: null,
+  taxPercent: null,
+  otherCharges: null,
+  discountPercent: null,
+  amount: null,
+  date: this.todayString()
   });
   }
   
