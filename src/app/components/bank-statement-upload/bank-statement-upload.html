@@ -1,0 +1,30 @@
+<section class="upload-shell">
+  <div class="upload-header">
+    <h2>Bank Statement Upload</h2>
+    <p>Upload a CSV or PDF bank statement and import transactions automatically.</p>
+    <p class="upload-note">
+      <strong>Note:</strong> PDF files must be text-based (not scanned images).
+      If you get parsing errors, try converting your PDF to CSV or request a digital statement from your bank.
+    </p>
+  </div>
+
+  <div class="upload-actions">
+    <label class="file-input-label" for="statement-upload">
+      Choose CSV or PDF file
+      <input
+        id="statement-upload"
+        type="file"
+        accept=".csv,.pdf"
+        (change)="onFileSelected($event)"
+      />
+    </label>
+  </div>
+
+  <div class="upload-status">
+    <p *ngIf="status()" class="status-message">{{ status() }}</p>
+    <p *ngIf="importedCount() > 0" class="status-success">
+      Imported {{ importedCount() }} transactions.
+    </p>
+    <p *ngIf="warnings()" class="status-warning">{{ warnings() }}</p>
+  </div>
+</section>

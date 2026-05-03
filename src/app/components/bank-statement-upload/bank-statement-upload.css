@@ -1,0 +1,67 @@
+.upload-shell {
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface, #ffffff);
+}
+
+.upload-header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.upload-header p {
+  margin: 0;
+  color: var(--muted, #6b7280);
+}
+
+.upload-note {
+  font-size: 0.875rem;
+  color: var(--warning, #92400e);
+  background: var(--warning-light, #fef3c7);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--warning-border, #f59e0b);
+  margin-top: 0.5rem;
+}
+
+.upload-actions {
+  margin-top: 1rem;
+}
+
+.file-input-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--primary, #2563eb);
+  border-radius: 0.75rem;
+  background: var(--primary-light, #eff6ff);
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+}
+
+.file-input-label input {
+  display: none;
+}
+
+.upload-status {
+  margin-top: 1rem;
+  min-height: 2rem;
+}
+
+.status-message,
+.status-success,
+.status-warning {
+  margin: 0.25rem 0;
+}
+
+.status-success {
+  color: var(--success, #15803d);
+}
+
+.status-warning {
+  color: var(--warning, #b45309);
+}

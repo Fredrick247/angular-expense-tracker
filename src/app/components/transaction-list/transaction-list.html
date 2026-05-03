@@ -18,13 +18,14 @@
       </thead>
 
       <tbody>
-        <tr *ngFor="let t of transactions">
+        <tr *ngFor="let t of paginatedTransactions">
           <td>{{ t.date | date: dateFormat }}</td>
 
           <td>
             <span
               class="type-pill"
-              [ngClass]="t.type === 'income' ? 'pill-income' : 'pill-expense'">
+              [class.pill-income]="t.type === 'income'"
+              [class.pill-expense]="t.type === 'expense'">
               {{ t.type | titlecase }}
             </span>
           </td>
@@ -43,6 +44,26 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="pagination-controls">
+    <div class="pagination-left">
+      <button (click)="prevPage()" [disabled]="currentPage === 1" class="pagination-btn">
+        ← Previous
+      </button>
+      <span class="pagination-info">
+        Page {{ currentPage }} of {{ totalPages }} | {{ transactions.length }} total
+      </span>
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="pagination-btn">
+        Next →
+      </button>
+    </div>
+    <div class="pagination-right">
+      <label for="page-size-select" class="page-size-label">Show per page:</label>
+      <select id="page-size-select" [(ngModel)]="pageSize" (change)="changePageSize(pageSize)" class="page-size-select">
+        <option *ngFor="let size of availablePageSizes" [value]="size">{{ size }}</option>
+      </select>
+    </div>
   </div>
 </div>
 

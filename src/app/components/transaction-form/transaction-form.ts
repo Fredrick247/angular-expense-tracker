@@ -15,8 +15,8 @@ import { TransactionService } from '../../services/transaction';
 export class TransactionForm {
   form : FormGroup;
 
-  incomeCategories: string[] = ['Salary', 'Bonus', 'Freelance', 'Investment'];
-  expenseCategories: string[] = ['Food', 'Rent', 'Transport', 'Bills', 'Shopping'];
+  incomeCategories: string[] = ['Salary', 'Bonus', 'Freelance', 'Investment', 'Transfer'];
+  expenseCategories: string[] = ['Food', 'Rent', 'Transport', 'Bills', 'Shopping', 'Transfer'];
 
   constructor(
     private fb: FormBuilder,
