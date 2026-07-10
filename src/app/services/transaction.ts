@@ -35,6 +35,18 @@ export class TransactionService {
     this.saveToStorage(updated);
   }
 
+  importTransactions(entries: Omit<Transaction, 'id'>[]) {
+    const current = this.getCurrent();
+    const startId = current.length ? Math.max(...current.map(t => t.id)) + 1 : 1;
+    const imported = entries.map((entry, index) => ({
+      id: startId + index,
+      ...entry,
+    }));
+    const updated = [...current, ...imported];
+    this.transactionsSubject.next(updated);
+    this.saveToStorage(updated);
+  }
+
   updateTransaction(id:number, changes:Partial<Transaction>): void{
     const current =this.getCurrent();
     const updated = current.map(t =>

@@ -1,14 +1,15 @@
 import { Component } from '@angular/core';
-import { TitleCasePipe,DecimalPipe } from '@angular/common'; // ✅ add this
+import { DecimalPipe } from '@angular/common';
 import { Transaction } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction';
 import { TransactionForm } from '../transaction-form/transaction-form';
 import { TransactionList } from '../transaction-list/transaction-list';
+import { BankStatementUpload } from '../bank-statement-upload/bank-statement-upload';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [TransactionForm, TransactionList,TitleCasePipe,DecimalPipe],
+  imports: [TransactionForm, TransactionList, BankStatementUpload, DecimalPipe],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'
 })

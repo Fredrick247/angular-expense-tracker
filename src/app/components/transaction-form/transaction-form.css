@@ -29,6 +29,7 @@ form {
   max-width: 900px; 
   margin: 0 auto 2rem auto;
 }
+
 /* Title */
 h2{
   margin-top: 0;
@@ -40,9 +41,8 @@ h2{
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  grid-template-columns: 2fr 1fr; /* date gets more space */
+  gap: 20px;
 }
 
 .form-row {
@@ -50,6 +50,29 @@ h2{
   flex-direction: column;
   gap: 0.25rem;
 }
+
+.form-row-date {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.form-row-date label {
+ font-weight: 600;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+.form-row-date input,
+.form-row-date select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: #111827;
+  background-color: #f9fafb;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+}
+
 
 .form-row label {
   font-weight: 600;
