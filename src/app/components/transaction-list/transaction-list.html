@@ -31,7 +31,15 @@
           </td>
 
           <td>{{ t.category }}</td>
-          <td>{{ t.description || '-' }}</td>
+          <td class="description-cell">
+            @if (descriptionLines(t.description); as lines) {
+              @for (line of lines; track $index) {
+                <div class="description-line">{{ line }}</div>
+              }
+            } @else {
+              -
+            }
+          </td>
 
           <td class="amount-col" [class.negative]="t.type === 'expense'">
             {{ t.amount | number: '1.2-2' }}

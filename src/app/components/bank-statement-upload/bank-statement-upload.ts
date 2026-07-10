@@ -323,11 +323,15 @@ export class BankStatementUpload {
   }
 
   private preprocessPdfText(text: string): string {
+    // Notice/summary/header lines are deliberately NOT filtered out here — extractTransactionLines
+    // needs to see them in sequence so it can use them as boundary markers that end the current
+    // transaction. Filtering them out this early would remove the very lines that tell us "the
+    // notice paragraph starts here", leaving nothing to stop its continuation lines from being
+    // silently appended to whichever transaction happened to precede it.
     const lines = text
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .filter(line => !this.isNoticeLine(line) && !this.isSummaryLine(line) && !this.isTableHeaderLine(line));
+      .filter(line => line.length > 0);
 
     return lines
       .join('\n')
@@ -336,11 +340,10 @@ export class BankStatementUpload {
       .replace(/\bStatement Date[:\s]*[^\n]*/gi, '')
       .replace(/\bAccount Number[:\s]*[^\n]*/gi, '')
       .replace(/\bBalance[:\s]*[^\n]*/gi, '')
-      // Remove excessive whitespace within joined text
-      .replace(/\s{3,}/g, '  ')
-      // Remove line breaks that don't separate transactions
-      .replace(/\n(?!\d{1,2}[\/\-]\d{1,2}[\/\-])/g, ' ')
-      // Clean up
+      // Remove excessive whitespace within joined text (but keep line breaks intact —
+      // extractTransactionLines does its own line-aware continuation joining afterwards, and
+      // needs each original PDF line to stay separate so it can dedupe repeated fragments).
+      .replace(/[ \t]{3,}/g, '  ')
       .trim();
   }
 
@@ -348,7 +351,11 @@ export class BankStatementUpload {
     const normalized = line.trim().toLowerCase();
     return /\b(important notice|notis penting|effective\s+\d{1,2}\s+[a-z]+\s+\d{4}|callcentre|call centre|www\.cimb|cimb\.com\.my|cimb bank|cimb bank berhad|statement of account|statement date|statement date\s*\/\s*tarikh|tarikh penyata|page\s*\/\s*halaman|page\s+\d+\s+of\s+\d+|halaman|account number|call centre|phone banking|email at|statement is deemed|enquire balances|for more information|you can transfer funds|you can funds|for more information|important notice|notis penting|ref no|deposits tax|tax \(rm\)|balance \(rm\)|opening balance|closing balance|end of statement|akhir penyata|phone banking service is free|mm\/s|bbb-ppppppp)\b/i.test(normalized)
       || /\b(expense|income)\s+\1\b/i.test(line)
-      || (/\b(date|description|ref no|deposits|tax|rm|page)\b/i.test(normalized) && /\b(statement|halaman|cimb|bank|page|date|call centre|callcentre)\b/i.test(normalized));
+      || (/\b(date|description|ref no|deposits|tax|rm|page)\b/i.test(normalized) && /\b(statement|halaman|cimb|bank|page|date|call centre|callcentre)\b/i.test(normalized))
+      // "Opening balance"/"closing balance" can land on its own PDF row split from the label
+      // that follows (e.g. "CLOSING" then "BALANCE / BAKI PENUTUP 33.14" on the next row), so
+      // a row containing nothing but one of these words also counts as a boundary.
+      || /^(opening|closing|baki\s+penutup)$/i.test(normalized);
   }
 
   private isSummaryLine(line: string): boolean {
@@ -395,11 +402,14 @@ export class BankStatementUpload {
   }
 
   private extractTransactionLines(text: string): { headerLine: string; fullText: string }[] {
+    // Notice/summary/header lines are classified inside the loop below (not filtered out here)
+    // so they can flush whatever transaction was accumulating and act as a hard boundary — a
+    // stray non-matching continuation line right after one of them (e.g. a wrapped sentence from
+    // a regulatory notice paragraph) is dropped instead of being appended to the wrong transaction.
     const lines = text
       .split('\n')
       .map(line => line.trim())
-      .filter(Boolean)
-      .filter(line => !this.isNoticeLine(line) && !this.isSummaryLine(line) && !this.isTableHeaderLine(line));
+      .filter(Boolean);
 
     const datePattern = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/;
     const isoDatePattern = /\b\d{4}-\d{2}-\d{2}\b/;
@@ -441,7 +451,10 @@ export class BankStatementUpload {
         currentHeaderLine = line;
         currentTransaction = line;
       } else if (currentTransaction) {
-        currentTransaction += ' ' + line;
+        // Keep continuation lines on their own line (rather than joining with a space) so the
+        // description can later be rendered/deduplicated line by line instead of as one run-on
+        // sentence.
+        currentTransaction += '\n' + line;
       }
     }
 
@@ -499,16 +512,38 @@ export class BankStatementUpload {
       return null;
     }
 
-    // Build description from the full (multi-line) transaction text, removing only the
-    // specific amount figures we identified, the bank's leading transaction-type label, and
-    // known reference-code patterns — not a blanket keyword strip that can eat merchant names.
-    let description = fullText.slice(fullText.indexOf(dateString) + dateString.length).trim();
-    for (const amount of candidateAmounts) {
-      description = description.split(amount).join(' ');
-    }
-    description = this.stripLeadingTypeLabel(description);
-    description = this.stripReferenceTokens(description);
-    description = description.replace(/\s{2,}/g, ' ').trim();
+    // Build the description line by line (rather than as one run-on sentence), removing only the
+    // specific amount figures we identified, the bank's leading transaction-type label, and known
+    // reference-code patterns — not a blanket keyword strip that can eat merchant names.
+    const rawLines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    // A lone secondary date + short digit code (e.g. a card transaction date and last-4-digits)
+    // carries no useful information beyond the transaction's own date column.
+    const cardMetadataLine = /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\s+\d{1,6}$/;
+
+    const cleanedChunks: string[] = [];
+    rawLines.forEach((rawLine, index) => {
+      let line = index === 0 ? rawLine.slice(rawLine.indexOf(dateString) + dateString.length) : rawLine;
+      for (const amount of candidateAmounts) {
+        line = line.split(amount).join(' ');
+      }
+      if (index === 0) {
+        line = this.stripLeadingTypeLabel(line);
+      }
+
+      // A single physical PDF row can pack multiple wide-gapped fields onto one line (e.g. a
+      // short nickname followed by a truncated preview of the same name). Split on those wide
+      // gaps *before* any cleanup step that collapses whitespace, so the boundary survives long
+      // enough for dedup below to catch same-row duplicates.
+      line.split(/\s{2,}/).forEach(chunk => {
+        const trimmedChunk = this.stripReferenceTokens(chunk).replace(/\s+/g, ' ').trim();
+        if (trimmedChunk && !cardMetadataLine.test(trimmedChunk)) {
+          cleanedChunks.push(trimmedChunk);
+        }
+      });
+    });
+
+    const dedupedLines = this.dedupeDescriptionLines(cleanedChunks);
+    let description = dedupedLines.join('\n');
 
     if (!description || description.length < 3) {
       description = this.inferDescriptionFromLine(fullText);
@@ -547,6 +582,36 @@ export class BankStatementUpload {
       }
     }
     return trimmed;
+  }
+
+  // Bank statements often wrap a single name/merchant across several lines, repeating a
+  // truncated preview before the full text, e.g. "Kevin" / "FRED" / "KEVIN FREDRICK V DE" — and
+  // the wrap doesn't always break on a word boundary ("FRED" can land on its own row even though
+  // it's really just the start of "FREDRICK" on the next row). Two passes, independent of
+  // arrival order: first collapse exact case-insensitive duplicates (preferring an all-caps
+  // rendering), then drop any remaining line that's wholly contained within a longer one.
+  private dedupeDescriptionLines(lines: string[]): string[] {
+    const chosenRendering = new Map<string, string>();
+    const order: string[] = [];
+    for (const line of lines) {
+      const normalized = line.toUpperCase();
+      if (!chosenRendering.has(normalized)) {
+        chosenRendering.set(normalized, line);
+        order.push(normalized);
+      } else if (line === normalized) {
+        chosenRendering.set(normalized, line); // prefer the fully capitalised rendering
+      }
+    }
+    const deduped = order.map(normalized => chosenRendering.get(normalized)!);
+
+    return deduped.filter((line, i) => {
+      const normalized = line.toUpperCase();
+      return !deduped.some((other, j) => {
+        if (i === j) return false;
+        const otherNormalized = other.toUpperCase();
+        return otherNormalized.length > normalized.length && otherNormalized.includes(normalized);
+      });
+    });
   }
 
   private inferDescriptionFromLine(line: string): string {

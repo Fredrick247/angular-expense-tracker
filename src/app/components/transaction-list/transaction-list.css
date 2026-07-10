@@ -41,6 +41,19 @@
   background: #f9fafb;
 }
 
+.description-cell {
+  min-width: 220px;
+}
+
+.description-line {
+  line-height: 1.35;
+}
+
+.description-line:not(:first-child) {
+  color: #6b7280;
+  font-size: 0.85em;
+}
+
 /* etc. keep your type-pill, buttons, amount-col styles */
 
 /* Pagination Controls */

@@ -78,4 +78,10 @@ public onEditAmount(t: Transaction): void{
 public onDelete(id: number): void {
   this.transactionService.removeTransaction(id);
 }
+
+descriptionLines(description?: string): string[] | null {
+  if (!description) return null;
+  const lines = description.split('\n').map(line => line.trim()).filter(Boolean);
+  return lines.length ? lines : null;
+}
 }
