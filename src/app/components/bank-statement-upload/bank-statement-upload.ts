@@ -182,7 +182,7 @@ export class BankStatementUpload {
         }
       }
 
-      const fullText = pageTexts.join('\n').trim();
+      const fullText = this.removeRepeatedBoilerplateLines(pageTexts);
 
       if (!fullText) {
         throw new Error('No text content could be extracted from the PDF. It may be image-based or corrupted.');
@@ -235,6 +235,53 @@ export class BankStatementUpload {
     return sortedRows.join('\n');
   }
 
+  // Bank statements repeat the same letterhead/account-number/footer lines on every page.
+  // Those lines don't always contain a recognizable keyword (e.g. a bare account number),
+  // so keyword filtering alone lets them slip through and get glued onto adjacent transactions.
+  // Detecting lines that recur across most pages catches them regardless of wording — but only
+  // lines near the very top/bottom of each page are considered, since a merchant name that
+  // legitimately recurs many times in the middle of the transaction table (e.g. a daily
+  // subscription charge) should never be treated as page furniture.
+  private removeRepeatedBoilerplateLines(pageTexts: string[]): string {
+    if (pageTexts.length < 3) {
+      return pageTexts.join('\n').trim();
+    }
+
+    const datePattern = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/;
+    const amountPattern = /\d{1,3}(?:,\d{3})*\.\d{2}\b/;
+    const HEADER_WINDOW = 10;
+    const FOOTER_WINDOW = 5;
+
+    const frequency = new Map<string, number>();
+    for (const pageText of pageTexts) {
+      const pageLines = pageText.split('\n').map(line => line.trim()).filter(Boolean);
+      const edgeLines = new Set([
+        ...pageLines.slice(0, HEADER_WINDOW),
+        ...pageLines.slice(Math.max(0, pageLines.length - FOOTER_WINDOW)),
+      ]);
+      for (const line of edgeLines) {
+        frequency.set(line, (frequency.get(line) ?? 0) + 1);
+      }
+    }
+
+    const minRepeats = Math.max(3, Math.ceil(pageTexts.length * 0.5));
+    const boilerplateLines = new Set(
+      Array.from(frequency.entries())
+        .filter(([line, count]) => count >= minRepeats && !datePattern.test(line) && !amountPattern.test(line))
+        .map(([line]) => line),
+    );
+
+    return pageTexts
+      .map(pageText =>
+        pageText
+          .split('\n')
+          .filter(rawLine => !boilerplateLines.has(rawLine.trim()))
+          .join('\n'),
+      )
+      .join('\n')
+      .trim();
+  }
+
   private importPdfText(text: string): void {
     // Preprocess text to clean up common PDF artifacts
     const cleanedText = this.preprocessPdfText(text);
@@ -250,7 +297,7 @@ export class BankStatementUpload {
     }
 
     const rows = transactionLines
-      .map(line => this.extractPdfRow(line))
+      .map(record => this.extractPdfRow(record))
       .filter((row): row is string[] => row !== null);
 
     if (!rows.length) {
@@ -347,7 +394,7 @@ export class BankStatementUpload {
     return found >= 4 || rmCount >= 2;
   }
 
-  private extractTransactionLines(text: string): string[] {
+  private extractTransactionLines(text: string): { headerLine: string; fullText: string }[] {
     const lines = text
       .split('\n')
       .map(line => line.trim())
@@ -356,17 +403,26 @@ export class BankStatementUpload {
 
     const datePattern = /\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/;
     const isoDatePattern = /\b\d{4}-\d{2}-\d{2}\b/;
-    const amountPattern = /[-]?\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?/;
+    // Requires an actual decimal amount (or thousands grouping) so secondary dates/reference
+    // numbers on continuation lines (e.g. a card transaction date + last-4-digits) aren't
+    // mistaken for a new transaction row.
+    const amountPattern = /\d{1,3}(?:,\d{3})*\.\d{2}\b|\d{1,3}(?:,\d{3})+\b/;
 
-    const transactionLines: string[] = [];
+    const transactionLines: { headerLine: string; fullText: string }[] = [];
+    let currentHeaderLine = '';
     let currentTransaction = '';
+
+    const flush = () => {
+      if (currentTransaction.trim()) {
+        transactionLines.push({ headerLine: currentHeaderLine, fullText: currentTransaction.trim() });
+      }
+      currentHeaderLine = '';
+      currentTransaction = '';
+    };
 
     for (const line of lines) {
       if (this.isNoticeLine(line) || this.isSummaryLine(line) || this.isTableHeaderLine(line)) {
-        if (currentTransaction.trim()) {
-          transactionLines.push(currentTransaction.trim());
-        }
-        currentTransaction = '';
+        flush();
         continue;
       }
 
@@ -376,31 +432,27 @@ export class BankStatementUpload {
         && !hasDate;
 
       if (looksLikeHeader) {
-        if (currentTransaction.trim()) {
-          transactionLines.push(currentTransaction.trim());
-        }
-        currentTransaction = '';
+        flush();
         continue;
       }
 
       if (hasDate && hasAmount) {
-        if (currentTransaction.trim()) {
-          transactionLines.push(currentTransaction.trim());
-        }
+        flush();
+        currentHeaderLine = line;
         currentTransaction = line;
       } else if (currentTransaction) {
         currentTransaction += ' ' + line;
       }
     }
 
-    if (currentTransaction.trim()) {
-      transactionLines.push(currentTransaction.trim());
-    }
+    flush();
 
     return transactionLines;
   }
 
-  private extractPdfRow(line: string): string[] | null {
+  private extractPdfRow(record: { headerLine: string; fullText: string }): string[] | null {
+    const { headerLine, fullText } = record;
+
     // More comprehensive date patterns
     const datePatterns = [
       /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})\b/, // DD/MM/YYYY or MM/DD/YYYY
@@ -410,7 +462,7 @@ export class BankStatementUpload {
 
     let dateMatch: RegExpMatchArray | null = null;
     for (const pattern of datePatterns) {
-      dateMatch = line.match(pattern);
+      dateMatch = headerLine.match(pattern);
       if (dateMatch) break;
     }
 
@@ -420,13 +472,17 @@ export class BankStatementUpload {
 
     const dateString = dateMatch[0];
 
-    if (this.isSummaryLine(line)) {
+    if (this.isSummaryLine(fullText)) {
       return null;
     }
 
-    const numericAmountRegex = /[-]?\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})/g;
-    const lineAfterDate = line.slice(line.indexOf(dateString) + dateString.length).trim();
-    const candidateAmounts = Array.from(lineAfterDate.matchAll(numericAmountRegex)).map(m => m[0]);
+    // Tightened: requires a real decimal/thousands-grouped amount, and is only run against the
+    // original date+amount row (not the wrapped continuation/description lines), so numbers
+    // embedded in merchant names, exchange rates, or reference codes can't be mistaken for the
+    // transaction amount.
+    const numericAmountRegex = /[-]?\d{1,3}(?:,\d{3})*\.\d{2}\b/g;
+    const headerAfterDate = headerLine.slice(headerLine.indexOf(dateString) + dateString.length).trim();
+    const candidateAmounts = Array.from(headerAfterDate.matchAll(numericAmountRegex)).map(m => m[0]);
 
     const validAmounts = candidateAmounts.filter(amount => {
       const cleanAmount = amount.replace(/[^0-9.,\-]/g, '');
@@ -438,28 +494,59 @@ export class BankStatementUpload {
       return null;
     }
 
-    const amountString = this.selectTransactionAmount(validAmounts, lineAfterDate);
+    const amountString = this.selectTransactionAmount(validAmounts, headerAfterDate);
     if (!amountString) {
       return null;
     }
 
-    // Extract description by removing all numeric amount tokens
-    let description = lineAfterDate
-      .replace(numericAmountRegex, '')
-      .replace(/\b(debit|withdrawal|payment|dr|credit|deposit|cr|received|transfer|atm|pos|online|fee|interest|charge)\b/gi, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim();
+    // Build description from the full (multi-line) transaction text, removing only the
+    // specific amount figures we identified, the bank's leading transaction-type label, and
+    // known reference-code patterns — not a blanket keyword strip that can eat merchant names.
+    let description = fullText.slice(fullText.indexOf(dateString) + dateString.length).trim();
+    for (const amount of candidateAmounts) {
+      description = description.split(amount).join(' ');
+    }
+    description = this.stripLeadingTypeLabel(description);
+    description = this.stripReferenceTokens(description);
+    description = description.replace(/\s{2,}/g, ' ').trim();
 
-    // Only strip "by order of" phrases, keep transaction IDs for reference
-    description = description.replace(/\b(by\s+order\s+of|order\s+of)\s+/gi, '').trim();
     if (!description || description.length < 3) {
-      description = this.inferDescriptionFromLine(line);
+      description = this.inferDescriptionFromLine(fullText);
     }
 
     // Enhanced type detection
-    const typeHint = this.determineTransactionType(line, amountString);
+    const typeHint = this.determineTransactionType(fullText, amountString);
 
     return [dateString, description || 'Imported transaction', amountString, typeHint];
+  }
+
+  // The bank's transaction-type code always appears immediately after the date, e.g.
+  // "I-PAYMENT", "POS DEBIT", "DUITNOW TO ACCOUNT". Stripping it by exact leading match (rather
+  // than removing these words wherever they occur) avoids mangling merchant names that happen to
+  // contain the same words, e.g. "AEON CREDIT SERVICES".
+  private readonly leadingTypeLabels = [
+    'DUITNOW ONLINE BANKING',
+    'DUITNOW TO ACCOUNT',
+    'DIRECT DEBIT CHARGE',
+    'DIRECT DEBIT',
+    'CREDIT INTEREST',
+    'REMITTANCE CR',
+    'REMITTANCE',
+    'POS DEBIT',
+    'I-PAYMENT',
+    'DUITNOW',
+  ];
+
+  private stripLeadingTypeLabel(text: string): string {
+    let trimmed = text.trim();
+    for (const label of this.leadingTypeLabels) {
+      const pattern = new RegExp('^' + label.replace(/\s+/g, '\\s+') + '\\b', 'i');
+      if (pattern.test(trimmed)) {
+        trimmed = trimmed.replace(pattern, '').trim();
+        break;
+      }
+    }
+    return trimmed;
   }
 
   private inferDescriptionFromLine(line: string): string {
@@ -501,6 +588,8 @@ export class BankStatementUpload {
       .replace(/\b\d+[A-Z]+\d+[A-Z0-9]*\b/g, '')
       // Remove repeated hex patterns
       .replace(/\b[a-f0-9]{16,}\b/gi, '')
+      // Remove asterisk-joined reference codes like 260110*CMD267662267
+      .replace(/\b\d+\*[A-Z0-9]+\b/gi, '')
       // Remove patterns like "order of NAME" but keep the actual merchant
       .replace(/\b(by\s+order\s+of|by\s+|order\s+of)\s+/gi, '')
       // Remove extra whitespace
@@ -760,9 +849,11 @@ export class BankStatementUpload {
         day = parts[1];
         month = parts[0];
       } else {
-        // Ambiguous, assume MM-DD-YYYY -> DD-MM-YYYY
-        day = parts[1];
-        month = parts[0];
+        // Ambiguous: default to DD-MM-YYYY (international convention), consistent with the
+        // 2-digit-year branch below. Previously assumed MM-DD-YYYY here, which misread
+        // day-first statement dates like "11/01/2026" (11 Jan) as 1 Nov.
+        day = parts[0];
+        month = parts[1];
       }
     }
     // If middle part is 4 digits, it's likely MM-YYYY-DD (unlikely but handle it)
@@ -848,23 +939,28 @@ export class BankStatementUpload {
       .replace(/^[£$€¥₹₽₩₦₨₪₫₡₵₺₴₸₼₲₱₭₯₰₳₶₷₹₻₽₾₿]\s*/, '') // Remove currency symbols at start
       .replace(/\s*[£$€¥₹₽₩₦₨₪₫₡₵₺₴₸₼₲₱₭₯₰₳₶₷₹₻₽₾₿]$/, ''); // Remove currency symbols at end
 
-    // Handle different number formats
-    let normalized = withoutCurrency
-      .replace(/\s+/g, '') // Remove spaces
-      .replace(/,/g, '.') // Convert commas to decimal points
-      .replace(/(\..*)\./g, '$1'); // Remove duplicate decimal points
+    // Handle different number formats. Figure out which of ',' and '.' is the decimal
+    // separator (rather than blindly converting every comma to a dot) so amounts that use
+    // both, like the common "6,326.08" thousands+decimal format, aren't corrupted.
+    const withoutSpaces = withoutCurrency.replace(/\s+/g, '');
+    const lastComma = withoutSpaces.lastIndexOf(',');
+    const lastDot = withoutSpaces.lastIndexOf('.');
 
-    // Handle cases where comma is used as thousands separator
-    const parts = normalized.split('.');
-    if (parts.length === 2) {
-      // If we have a decimal part, check if the last part before decimal has comma groups
-      const integerPart = parts[0];
-      const decimalPart = parts[1];
-
-      // If integer part has commas and is longer than 3 digits, treat comma as thousands separator
-      if (integerPart.includes(',') && integerPart.replace(/,/g, '').length > 3) {
-        normalized = integerPart.replace(/,/g, '') + '.' + decimalPart;
-      }
+    let normalized: string;
+    if (lastComma !== -1 && lastDot !== -1) {
+      // Both present: whichever appears last is the decimal separator.
+      normalized = lastDot > lastComma
+        ? withoutSpaces.replace(/,/g, '')
+        : withoutSpaces.replace(/\./g, '').replace(',', '.');
+    } else if (lastComma !== -1) {
+      // Only commas: a single comma followed by exactly 2 digits is a decimal separator,
+      // otherwise commas are thousands grouping.
+      const commaCount = (withoutSpaces.match(/,/g) || []).length;
+      normalized = commaCount === 1 && /,\d{2}$/.test(withoutSpaces)
+        ? withoutSpaces.replace(',', '.')
+        : withoutSpaces.replace(/,/g, '');
+    } else {
+      normalized = withoutSpaces;
     }
 
     const number = Number(normalized);
@@ -970,8 +1066,17 @@ export class BankStatementUpload {
   private cleanDescription(description: string): string {
     if (!description) return '';
 
-    return description
-      .replace(/\b(debit|withdrawal|payment|dr|credit|deposit|cr|received|transfer|atm|pos|online|fee|interest|charge|card|account)\b/gi, '')
+    // Only strip these transaction-type words when they lead the description (e.g. "POS DEBIT
+    // WALMART" -> "WALMART"), not wherever they occur — otherwise merchant names that legitimately
+    // contain them (e.g. "AEON CREDIT SERVICES") get mangled ("AEON CREDIT SERVICES" -> "AEON").
+    const leadingTypeWord = /^(debit|withdrawal|payment|dr|credit|deposit|cr|received|transfer|atm|pos|online|fee|interest|charge|card|account)\b/i;
+    let cleaned = description.trim();
+    let match: RegExpMatchArray | null;
+    while ((match = cleaned.match(leadingTypeWord))) {
+      cleaned = cleaned.slice(match[0].length).trim();
+    }
+
+    return cleaned
       .replace(/\b(rm|\(rm\))\b/gi, '')
       .replace(/\s{2,}/g, ' ')
       .replace(/^[()\s]+|[()\s]+$/g, '')
