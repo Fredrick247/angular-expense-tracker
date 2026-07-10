@@ -128,15 +128,13 @@ export class BankStatementUpload {
     try {
       const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as any;
 
-      // Set up worker with proper error handling
-      try {
-        const workerUrl = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
-        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-      } catch (workerError) {
-        console.warn('Worker setup failed, trying CDN fallback:', workerError);
-        // Fallback: try to use the worker from CDN
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
-      }
+      // `new URL('pdfjs-dist/...', import.meta.url)` looks right but only works in dev — the
+      // production build never bundles/copies files reached through a bare node_modules
+      // specifier, so the browser ends up requesting a path that was never emitted to dist and
+      // 404s. The worker is instead copied to a fixed path via the "assets" entry in
+      // angular.json (see pdf.worker.min.mjs under node_modules/pdfjs-dist/legacy/build), which
+      // works identically in both `ng serve` and the deployed build.
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs/pdf.worker.min.mjs';
 
       const loadingTask = pdfjsLib.getDocument({
         data: buffer,
